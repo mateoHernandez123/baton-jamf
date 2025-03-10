@@ -15,6 +15,7 @@ import (
 )
 
 var version = "dev"
+cmdFlags(cmd)
 
 func main() {
 	ctx := context.Background()
