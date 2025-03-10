@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
+	"strconv"
 
 	"github.com/conductorone/baton-sdk/pkg/uhttp"
 )
@@ -60,6 +62,127 @@ func CreateBearerToken(ctx context.Context, username, password, serverInstance s
 	return res.Token, nil
 }
 
+func (c *Client) GetTokenDetails(ctx context.Context) (TokenDetails, error) {
+	url := fmt.Sprintf("%s/api/v1/auth", c.instanceUrl)
+
+	var res TokenDetails
+	if err := c.doRequest(ctx, url, &res); err != nil {
+		return TokenDetails{}, err
+	}
+
+	return res, nil
+}
+
+func (c *Client) getBaseUsers(ctx context.Context) ([]BaseType, error) {
+	usersUrl, err := url.JoinPath(c.baseUrl, "/users")
+	if err != nil {
+		return nil, err
+	}
+
+	var res struct {
+		Users []BaseType `json:"users"`
+	}
+
+	if err := c.doRequest(ctx, usersUrl, &res); err != nil {
+		return nil, err
+	}
+	return res.Users, nil
+}
+
+func (c *Client) getUserDetails(ctx context.Context, userId int) (User, error) {
+	userIdString := strconv.Itoa(userId)
+	usersUrl, err := url.JoinPath(c.baseUrl, "/users/id/", userIdString)
+
+	if err != nil {
+		return User{}, err
+	}
+
+	var res struct {
+		User User `json:"user"`
+	}
+
+	if err := c.doRequest(ctx, usersUrl, &res); err != nil {
+		return User{}, err
+	}
+
+	return res.User, nil
+}
+
+func (c *Client) getBaseUserGroups(ctx context.Context) ([]UserGroup, error) {
+	accountUrl, err := url.JoinPath(c.baseUrl, "/usergroups")
+	if err != nil {
+		return nil, err
+	}
+
+	var res struct {
+		UserGroup []UserGroup `json:"user_groups"`
+	}
+
+	if err := c.doRequest(ctx, accountUrl, &res); err != nil {
+		return nil, err
+	}
+	return res.UserGroup, nil
+}
+
+
+func (c *Client) getUserGroupDetails(ctx context.Context, userGroupId int) (UserGroup, error) {
+	groupIdString := strconv.Itoa(userGroupId)
+	usersUrl, err := url.JoinPath(c.baseUrl, "/usergroups/id/", groupIdString)
+
+	if err =! nil {
+		return UserGroup{}, err
+	}
+
+	var res struct {
+		UserGroup UserGroup `json:"user_groups"`
+	}
+
+	if err := c.doRequest(ctx, usersUrl, &res); err != nil {
+		return UserGroup{}, err
+	}
+
+	return res.UserGroup, nil
+}
+
+func (c *Client) GetUsers(ctx context.Context) ([]User, error) {
+	var users []User
+	baseUsers, err := c.getBaseUsers(ctx)
+
+	if err != nil {
+		return nil, err
+	}
+	
+	for _, baseUser := range baseUsers {
+		user, err := c.getUserDetails(ctx, baseUser.ID)
+		
+		if err != nil {
+			return nil, err
+		}
+		
+		users = append(users, user)
+	}
+
+	return users, nil
+}
+
+func (c *Client) GetUserGroups(ctx context.Context) ([]UserGroup, error) {
+	var usarGroups []UserGroup
+	baseUserGroup, err := c.getBaseUserGroups(ctx)
+
+	if err != nil {
+		return nil, err
+	}
+
+	for _,userGroup := range baseUserGroup {
+		if err != nil {
+			return nil, err
+		}
+		userGroups = append(userGroups, userGroupInfo)
+	}
+
+	return userGroups, nil
+}
+
 // Función para obtener la base de usuarios y grupos
 func (c *Client) getBaseAccounts(ctx context.Context) (*BaseAccount, error) {
 	url := fmt.Sprintf("%s/api/v1/accounts", c.baseUrl)
@@ -72,25 +195,61 @@ func (c *Client) getBaseAccounts(ctx context.Context) (*BaseAccount, error) {
 }
 
 // Obtener detalles de un usuario
-func (c *Client) GetUserAccountDetails(ctx context.Context, userID int) (*UserAccount, error) {
-	url := fmt.Sprintf("%s/api/v1/users/%d", c.baseUrl, userID)
-	var userAccount UserAccount
-	err := c.doRequest(ctx, url, &userAccount)
+func (c *Client) GetUserAccountDetails(ctx context.Context, userId int) (UserAccount, error) {
+	userIdString := strconv.Itoa(userId)
+	usersUrl, err := url.JoinPath(c.baseUrl, "/accounts/userid/", userIdString)
+
 	if err != nil {
-		return nil, err
+		return UserAccount{}, err
 	}
-	return &userAccount, nil
+
+	var res struct {
+		UserAccount UserAccount `json:"account"`
+	}
+
+	if err := c.doRequest(ctx, usersUrl, &res); err != nil {
+		return UserAccount{}, err
+	}
+
+	return res.UserAccount, nil
+
 }
 
 // Obtener detalles de un grupo
-func (c *Client) GetGroupDetails(ctx context.Context, groupID int) (*Group, error) {
-	url := fmt.Sprintf("%s/api/v1/groups/%d", c.baseUrl, groupID)
-	var group Group
-	err := c.doRequest(ctx, url, &group)
+func (c *Client) GetGroupDetails(ctx context.Context, groupId int) (Group, error) {
+	groupIdString := strconv.Itoa(groupId)
+	usersUrl, err := url.JoinPath(c.baseUrl, "/accounts/groupid/", groupIdString)
+
+	if err != nil {
+		return Group{}, err
+	}
+
+	var res struct {
+		Group Group `json:"group"`
+	}
+
+	if err := c.doRequest(ctx, usersUrl, &res); err != nil {
+		return Group{}, err
+	}
+
+	return res.Group, nil
+}
+
+func (c *Client) GetSites(ctx context.Context) ([]Site, error) {
+	sitesUrl, err := url.JoinPath(c.baseUrl, "/sites")
 	if err != nil {
 		return nil, err
 	}
-	return &group, nil
+
+	var res struct {
+		Sites []Site `json:"sites"`
+	}
+
+	if err := c.doRequest(ctx, sitesUrl, &res); err != nil {
+		return nil, err
+	}
+
+	return res.Sites, nil
 }
 
 // Obtener todas las cuentas de usuario y grupos
